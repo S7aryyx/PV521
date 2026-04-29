@@ -1,0 +1,2 @@
+Blank Solution
+Пустое Решение

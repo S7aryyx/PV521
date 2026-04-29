@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Элементы решения/">
+    <File Path="ReadMe.txt" />
+  </Folder>
+  <Project Path="MessegerClient2/MessegerClient2.csproj" />
+  <Project Path="MessegerServer/MessegerServer.csproj" />
+</Solution>
