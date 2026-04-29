@@ -7,120 +7,118 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Xml.Serialization;
+using System.Xml;
 
 
 namespace MessegerServer
-{ 
-
-class ServerTcp
 {
-    class MessageInfo
-    {
-        public string login { get; set; } //Логин отправителя сообщения
-        public string text { get; set; } //Текст сообщения
-        public DateTime sendTime { get; set; }
 
-        public override string ToString()
+    class ServerTcp
+    {
+        class MessageInfo
         {
-            return $"{this.login} :|: {this.text} Время: {this.sendTime} ";
-        }
-    }
-    class ClientInfo
-    {
-        public Socket socket { get; set; }
-        public Thread thread { get; set; } //Поток для общения с клиентом
-        public string login { get; set; }
-    }
+            public string login { get; set; } //Логин отправителя сообщения
+            public string text { get; set; } //Текст сообщения
+            public DateTime sendTime { get; set; }
 
-    static List<ClientInfo> clients = new List<ClientInfo>();
-    static List<MessageInfo> AllMessages = new List<MessageInfo>();
-    static string txtMessages = "messages.txt";
-
-    static void Main()
-    {
-        Console.InputEncoding = Console.OutputEncoding = Encoding.UTF8;
-        Console.WriteLine("Server Project");
-
-        IPEndPoint server = new IPEndPoint(IPAddress.Any, 8888);
-        Socket MessagerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-
-        MessagerSocket.Bind(server);
-        MessagerSocket.Listen(50);
-
-        Console.WriteLine("Сервер запущен. Ожидание подключений...");
-
-        while (true)
-        {
-            Socket currentClient = MessagerSocket.Accept();
-            Console.WriteLine($"Подключился новый клиент: {currentClient.RemoteEndPoint}");
-
-            ClientInfo clientInfo = new ClientInfo()
+            public override string ToString()
             {
-                socket = currentClient
-            };
-            clientInfo.thread = new Thread(() => AcceptedClientConnection(clientInfo));
-            clientInfo.thread.Start();
-            clients.Add(clientInfo);
+                return $"{this.login} :|: {this.text} Время: {this.sendTime} ";
+            }
         }
-    }
-
-    static void AcceptedClientConnection(ClientInfo client)
-    {
-        Socket currentClientSocket = client.socket;
-
-        try
+        class ClientInfo
         {
-            byte[] GettedBytes = new byte[1024];
-            int BytesCount = currentClientSocket.Receive(GettedBytes);
-            string clientLogin = Encoding.UTF8.GetString(GettedBytes, 0, BytesCount);
+            public Socket socket { get; set; }
+            public Thread thread { get; set; }
+            public string login { get; set; }
+        }
+
+        static List<ClientInfo> clients = new List<ClientInfo>();
+        static object ClientLock = new object();
+        //Заглушка для потока , чтобы он в процессе работы не принял новые (чужие) данные
+        static string txtMessages = "messages.txt";
+
+        static void Main()
+        {
+            IPEndPoint serverEp = new IPEndPoint(IPAddress.Any, 8888);
+            Socket listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            listenSocket.Bind(serverEp);
+            listenSocket.Listen(10);
 
             while (true)
             {
-                BytesCount = currentClientSocket.Receive(GettedBytes);
-                string clientMessage = Encoding.UTF8.GetString(GettedBytes, 0, BytesCount);
+                Socket clientSocket = listenSocket.Accept();
+                Console.WriteLine("[SERVER]Новое подключение: " + clientSocket.RemoteEndPoint.ToString());
 
-
-                var messageInfo = new MessageInfo()
-                {
-                    login = clientLogin,
-                    text = clientMessage,
-                    sendTime = DateTime.Now
-                };
-
-                Console.WriteLine(messageInfo.ToString());
-                AllMessages.Add(messageInfo);
-                MessageLog(messageInfo);
+                ClientInfo client = new ClientInfo { socket = clientSocket };
+                client.thread = new Thread(() => HandleClient(client));
+                //При подлючении юзера , сразу же запускается его обработка и обработчик его сообщений.
+                //Чтобы не блокировать работу севрера
+                //- эта обработка выносится в отдельный поток
+                //(где будут запущены РАЗНЫЕ обработчики разных пользователей)
+                client.thread.Start();
             }
         }
-        catch (SocketException) //Любой разрыв подключения с клиентом (причина не важна)
+        static void HandleClient(ClientInfo client)
         {
-            Console.WriteLine($"Клиент {client.login} отключился");
+            Socket socket = client.socket;
+            byte[] buffer = new byte[4096];
 
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка при обработке клиента");
-        }
-        finally
-        {
-            currentClientSocket.Close();
-        }
-    }
-
-    static void MessageLog(MessageInfo msg)
-    {
-        try
-        {
-            using (StreamWriter writer = new StreamWriter(txtMessages, true))
+            try
             {
-                writer.WriteLine("====");
-                writer.WriteLine(msg.ToString());
+                int bytesRead = socket.Receive(buffer);
+                string login = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                client.login = login;
+
+                while (true)
+                {
+                    bytesRead = socket.Receive(buffer);
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        string msg = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+
+                        var msgInfo = new MessageInfo
+                        {
+                            login = client.login,
+                            text = msg,
+                            sendTime = DateTime.Now
+                        };
+
+                        SendEveryfing(msg, client);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+            }
+
+        }
+
+        static void SendEveryfing(string message, ClientInfo currentClient)
+        {
+            byte[] buffer = new byte[4096];
+            buffer = Encoding.UTF8.GetBytes(message);
+            lock (ClientLock)
+            {
+                foreach (var client in clients)
+                {
+                    if (client != currentClient)
+                    {
+                        try
+                        {
+                            client.socket.Send(buffer);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Ошибка при отправке сообщения клиенту {client.login}: {ex.Message}");
+                        }
+                    }
+                }
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Ошибка при записи сообщения в лог: {ex.Message}");
-        }
     }
-}
 }

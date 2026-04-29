@@ -26,3 +26,7 @@ lbl_ConnectionStatus
 lb_Send
 btn_Send
 txt_Message
+
+
+
+ОТОШЁЛ перекурить
