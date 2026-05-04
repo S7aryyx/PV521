@@ -1,4 +1,4 @@
-﻿namespace MessegerServer
+﻿    namespace MessegerServer
 {
     using System.Net;
     using System.Net.Sockets;
@@ -12,7 +12,7 @@
         static void Main()
         {
             Console.InputEncoding = Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.WriteLine("Client Project");
+            Console.WriteLine("Server Project");
 
             userSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPEndPoint serverConnection = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8888);

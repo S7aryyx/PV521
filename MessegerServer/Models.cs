@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Xml.Serialization;
 using System.Xml;
 
@@ -94,6 +93,7 @@ namespace MessegerServer
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
             }
 
         }
