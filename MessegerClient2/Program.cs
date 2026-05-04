@@ -12,7 +12,6 @@ namespace MessegerClient2
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             Application.Run(new ConnectionForm());
-
         }
     }
 }

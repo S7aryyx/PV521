@@ -11,6 +11,7 @@ namespace MessegerClient2
 {
     public partial class ChatForm : Form
     {
+
         public static Socket ClientSocket;
         public static string ClientLogin;
         public ChatForm(Socket UserSocket , string UserLogin)

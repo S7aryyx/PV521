@@ -8,5 +8,4 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <StartupObject>MessegerServer.ServerTcp</StartupObject>
   </PropertyGroup>
-
 </Project>
