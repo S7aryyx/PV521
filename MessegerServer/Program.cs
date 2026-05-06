@@ -6,6 +6,7 @@
 
     class ClientTcp
     {
+        //static List<ClientInfo> clients = new List<ClientInfo>();
         static Socket userSocket = null;
         static string userLogin = null;
 
